@@ -7,9 +7,9 @@ import breeze.linalg._
 import org.apache.spark.SparkContext
 import org.scalatest.FunSuite
 import pipelines._
-import utils.{Stats, MatrixUtils}
+import utils.{TestUtils, Stats, MatrixUtils}
 
-class PCATransformerSuite extends FunSuite with LocalSparkContext with Logging {
+class PCASuite extends FunSuite with LocalSparkContext with Logging {
 
   test("PCA matrix transformation") {
     sc = new SparkContext("local", "test")
@@ -58,8 +58,7 @@ class PCATransformerSuite extends FunSuite with LocalSparkContext with Logging {
     val dimRed = 5
 
     // Generate a random Gaussian matrix.
-    val gau = new Gaussian(0.0, 1.0)
-    val randMatrix = new DenseMatrix(matRows, matCols, gau.sample(matRows*matCols).toArray)
+    val randMatrix = TestUtils.createLocalRandomMatrix(matRows, matCols)
 
     // Parallelize and estimate the PCA.
     val data = sc.parallelize(MatrixUtils.matrixToRowArray(randMatrix).map(x => convert(x, Float)))
@@ -71,7 +70,7 @@ class PCATransformerSuite extends FunSuite with LocalSparkContext with Logging {
 
     // Compute its covariance.
     val redCov = cov(redMat)
-    log.info(s"Covar$redCov")
+    logDebug(s"Covar$redCov")
 
     // The covariance of the dimensionality reduced matrix should be diagonal.
     for (
@@ -90,8 +89,7 @@ class PCATransformerSuite extends FunSuite with LocalSparkContext with Logging {
     val dimRed = 5
 
     // Generate a random Gaussian matrix.
-    val gau = new Gaussian(0.0, 1.0)
-    val randMatrix = new DenseMatrix(matRows, matCols, gau.sample(matRows*matCols).toArray)
+    val randMatrix = TestUtils.createLocalRandomMatrix(matRows, matCols)
 
     // Parallelize and estimate the PCA.
     val data = sc.parallelize(MatrixUtils.matrixToRowArray(randMatrix).map(x => convert(x, Float)), 4)
@@ -137,24 +135,24 @@ class PCATransformerSuite extends FunSuite with LocalSparkContext with Logging {
     val dimRed = 10
 
     // Generate a random Gaussian matrix.
-    //val gau = new Gaussian(0.0, 1.0)
-    //val randMatrix = lowRank(matRows, matCols, dimRed)
-    val gau = new Gaussian(0.0, 1.0)
-    val randMatrix = new DenseMatrix(matRows, matCols, gau.sample(matRows*matCols).toArray)
-
-    // This mimic's matlab's matrix norm (returns the maximum svd of a matrix).
-    def norm(x: DenseMatrix[Double]): Double = max(svd(x).S)
+    val randMatrix = TestUtils.createLocalRandomMatrix(matRows, matCols)
+    logInfo(s"${randMatrix(0 to 5, 0 to 5)}")
 
     for (
       p <- 5 to 10;
       k <- List(1, 5, 10, 20);
       q <- 1 to 20
     ) {
-      val Q = ApproximatePCAEstimator.approximateQ(randMatrix, k+p, q)
-      val eps = norm(randMatrix - Q*Q.t*randMatrix)
+      logDebug(s"Starting ${k + p}, $q")
+      val Q = ApproximatePCAEstimator.approximateQ(randMatrix, k + p, q)
+      logDebug(s"Got q: ${Q(0 to 3, 0 to 3)}")
+      logDebug(s"Got randMatrix: ${randMatrix(0 to 3, 0 to 3)}")
+      logDebug(s"Got diff: ${(randMatrix - (Q * Q.t * randMatrix)).apply(0 to 3, 0 to 3)}")
+      val err = randMatrix - (Q * Q.t * randMatrix)
+      val eps = norm(err.toDenseVector)
 
       //From 1.9 of HMT2011
-      assert(eps < (1+9*math.sqrt(k+p)*math.min(matRows,matCols))*svd(randMatrix).S(k))
+      assert(eps < (1 + 9 * math.sqrt(k + p) * math.min(matRows, matCols)) * svd(randMatrix).S(k))
     }
 
   }
@@ -167,8 +165,7 @@ class PCATransformerSuite extends FunSuite with LocalSparkContext with Logging {
     val dimRed = 10
 
     // Generate a random Gaussian matrix.
-    val gau = new Gaussian(0.0, 1.0)
-    val randMatrix = new DenseMatrix(matRows, matCols, gau.sample(matRows*matCols).toArray)
+    val randMatrix = TestUtils.createLocalRandomMatrix(matRows, matCols)
 
     // Parallelize and estimate the PCA.
     val data = sc.parallelize(MatrixUtils.matrixToRowArray(randMatrix).map(x => convert(x, Float)))
@@ -204,8 +201,7 @@ class PCATransformerSuite extends FunSuite with LocalSparkContext with Logging {
     val dimRed = 10
 
     // Generate a random Gaussian matrix.
-    val gau = new Gaussian(0.0, 1.0)
-    val randMatrix = new DenseMatrix(matRows, matCols, gau.sample(matRows*matCols).toArray)
+    val randMatrix = TestUtils.createLocalRandomMatrix(matRows, matCols)
 
     // Parallelize and estimate the PCA.
     val data = sc.parallelize(MatrixUtils.matrixToRowArray(randMatrix).map(x => convert(x, Float)))
