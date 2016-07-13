@@ -4,7 +4,7 @@ assemblySettings
 
 name := "keystoneml"
 
-version := "0.3.0-SNAPSHOT"
+version := "0.3.1-SNAPSHOT"
 
 organization := "edu.berkeley.cs.amplab"
 
